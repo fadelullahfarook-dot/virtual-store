@@ -13,12 +13,18 @@ export const HomePage = () => {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Enter a browser-based 3D virtual shopping environment where you can walk through virtual streets, explore different stores and discover products in an immersive shopping experience.
           </p>
-          <div className="flex justify-center gap-4 pt-4">
+          <div className="flex flex-wrap justify-center gap-4 pt-4">
             <Link to="/store" className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:bg-indigo-700 hover:-translate-y-1 transition-all">
               Enter Virtual Store
             </Link>
-            <a href="#how-it-works" className="bg-white text-indigo-600 border border-indigo-200 px-8 py-3 rounded-xl font-bold text-lg shadow-sm hover:bg-indigo-50 transition-all">
-              Explore How It Works
+            <Link to="/signup" className="bg-white text-indigo-600 border border-indigo-200 px-8 py-3 rounded-xl font-bold text-lg shadow-sm hover:bg-indigo-50 transition-all">
+              Sign Up
+            </Link>
+            <Link to="/login" className="bg-white/80 text-gray-700 border border-gray-300 px-8 py-3 rounded-xl font-bold text-lg shadow-sm hover:bg-gray-100 transition-all">
+              Login
+            </Link>
+            <a href="#how-it-works" className="text-gray-600 border border-transparent px-6 py-3 font-semibold text-lg hover:text-indigo-600 transition-all flex items-center">
+              How It Works &rarr;
             </a>
           </div>
         </div>
@@ -88,9 +94,17 @@ export const HomePage = () => {
           <p className="text-indigo-100 text-lg">
             Join now and experience the next generation of e-commerce.
           </p>
-          <Link to="/store" className="inline-block bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-indigo-50 transition-all">
-            Enter Virtual Store
-          </Link>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link to="/signup" className="inline-block bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-indigo-50 transition-all">
+              Sign Up Now
+            </Link>
+            <Link to="/login" className="inline-block bg-indigo-700 text-white border border-indigo-400 px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-indigo-800 transition-all">
+              Login
+            </Link>
+            <Link to="/store" className="inline-block bg-indigo-900 text-indigo-100 px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-indigo-950 transition-all">
+              Enter Virtual Store
+            </Link>
+          </div>
         </div>
       </section>
     </div>

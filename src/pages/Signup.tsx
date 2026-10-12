@@ -82,7 +82,7 @@ export const Signup = () => {
   });
 
   // Email / Phone Signup
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
     setError('');
@@ -97,19 +97,57 @@ export const Signup = () => {
       return;
     }
 
+    if (!API_URL) {
+      setError('API URL is not configured.');
+      return;
+    }
+
     const finalValue =
       contactMethod === 'phone'
         ? `${countryCode}${contactValue.trim()}`
         : contactValue.trim();
 
-    navigate('/verify-otp', {
-      state: {
-        method: contactMethod,
-        value: finalValue,
-        isNewUser: true,
-        name: name.trim(),
-      },
-    });
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_URL}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier: finalValue,
+          method: contactMethod,
+          isLogin: false,
+          name: name.trim(),
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to send OTP.');
+      }
+
+      navigate('/verify-otp', {
+        state: {
+          method: contactMethod,
+          value: finalValue,
+          isNewUser: true,
+          name: name.trim(),
+          debugOtp: data.debugOtp,
+        },
+      });
+    } catch (err) {
+      console.error('Send OTP error:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to send OTP. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -209,9 +247,9 @@ export const Signup = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors mt-2 disabled:opacity-60"
+            className="w-full bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors mt-2 disabled:opacity-60 flex justify-center items-center"
           >
-            Continue to OTP
+            {loading ? 'Sending OTP...' : 'Continue to OTP'}
           </button>
         </form>
 

@@ -34,7 +34,10 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
                   </li>
                 </>
               ) : (
-                <li><Link to="/login" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Login</Link></li>
+                <>
+                  <li><Link to="/login" className="text-gray-600 hover:text-indigo-600">Login</Link></li>
+                  <li><Link to="/signup" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Sign Up</Link></li>
+                </>
               )}
             </ul>
           </nav>
@@ -57,6 +60,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
               <li><Link to="/" className="hover:text-white">Home</Link></li>
               <li><Link to="/store" className="hover:text-white">Stores</Link></li>
               <li><Link to="/login" className="hover:text-white">Login</Link></li>
+              <li><Link to="/signup" className="hover:text-white">Sign Up</Link></li>
             </ul>
           </div>
           <div>

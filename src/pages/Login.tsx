@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Phone } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useStore } from '../store/useStore';
 
@@ -9,7 +8,7 @@ export const Login = () => {
   const navigate = useNavigate();
   const { login } = useStore();
 
-  const [method, setMethod] = useState<'options' | 'phone' | 'email'>('options');
+  const [method, setMethod] = useState<'email' | 'phone'>('email');
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -81,7 +80,7 @@ export const Login = () => {
     e.preventDefault();
 
     if (!inputValue.trim()) {
-      setError('Please enter your email or phone number.');
+      setError(`Please enter your ${method === 'email' ? 'email address' : 'phone number'}.`);
       return;
     }
 
@@ -158,124 +157,92 @@ export const Login = () => {
           </div>
         )}
 
-        {method === 'options' && (
-          <div className="space-y-4">
-            <button
-              type="button"
-              className="w-full flex items-center justify-center space-x-2 bg-white border border-gray-300 text-gray-700 px-4 py-3 rounded-xl hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
-              onClick={() => {
-                setError('');
-                handleGoogleLogin();
-              }}
-              disabled={loading}
-            >
-              <span className="font-bold text-lg leading-none">G</span>
-              <span>
-                {loading
-                  ? 'Authenticating...'
-                  : 'Continue with Google'}
-              </span>
-            </button>
-
-            <div className="relative flex items-center py-2">
-              <div className="flex-grow border-t border-gray-200" />
-              <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">
-                OR
-              </span>
-              <div className="flex-grow border-t border-gray-200" />
-            </div>
-
-            <button
-              type="button"
-              className="w-full flex items-center justify-center space-x-2 bg-indigo-50 text-indigo-700 px-4 py-3 rounded-xl hover:bg-indigo-100 transition-colors font-medium"
-              onClick={() => {
-                setMethod('phone');
-                setInputValue('');
-                setError('');
-              }}
-            >
-              <Phone className="w-5 h-5" />
-              <span>Continue with Phone</span>
-            </button>
-
-            <button
-              type="button"
-              className="w-full flex items-center justify-center space-x-2 bg-indigo-50 text-indigo-700 px-4 py-3 rounded-xl hover:bg-indigo-100 transition-colors font-medium"
-              onClick={() => {
-                setMethod('email');
-                setInputValue('');
-                setError('');
-              }}
-            >
-              <Mail className="w-5 h-5" />
-              <span>Continue with Email</span>
-            </button>
-          </div>
-        )}
-
-        {method !== 'options' && (
-          <form onSubmit={handleContinue} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+        <form onSubmit={handleContinue} className="space-y-4">
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-medium text-gray-700">
                 {method === 'phone' ? 'Phone Number' : 'Email Address'}
               </label>
 
-              {method === 'phone' ? (
-                <div className="flex gap-2">
-                  <select
-                    value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
-                    className="w-1/3 px-2 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 outline-none transition-all bg-white"
-                  >
-                    {COUNTRIES.map((country) => (
-                      <option key={country.code} value={country.code}>
-                        {country.label}
-                      </option>
-                    ))}
-                  </select>
+              <button
+                type="button"
+                className="text-xs text-indigo-600 hover:underline"
+                onClick={() => {
+                  setMethod(method === 'email' ? 'phone' : 'email');
+                  setInputValue('');
+                  setError('');
+                }}
+              >
+                Use {method === 'email' ? 'Phone' : 'Email'} instead
+              </button>
+            </div>
 
-                  <input
-                    type="tel"
-                    className="w-2/3 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 outline-none transition-all"
-                    placeholder="9876543210"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    required
-                  />
-                </div>
-              ) : (
+            {method === 'phone' ? (
+              <div className="flex gap-2">
+                <select
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  className="w-1/3 px-2 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 outline-none transition-all bg-white"
+                >
+                  {COUNTRIES.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.label}
+                    </option>
+                  ))}
+                </select>
+
                 <input
-                  type="email"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 outline-none transition-all"
-                  placeholder="you@example.com"
+                  type="tel"
+                  className="w-2/3 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 outline-none transition-all"
+                  placeholder="9876543210"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   required
                 />
-              )}
-            </div>
+              </div>
+            ) : (
+              <input
+                type="email"
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 outline-none transition-all"
+                placeholder="you@example.com"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                required
+              />
+            )}
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-60 flex justify-center items-center"
-            >
-              {loading ? 'Sending OTP...' : 'Send OTP'}
-            </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-60 flex justify-center items-center"
+          >
+            {loading ? 'Sending OTP...' : 'Send OTP'}
+          </button>
+        </form>
 
-            <button
-              type="button"
-              className="w-full text-gray-500 text-sm font-medium py-2 hover:text-gray-900"
-              onClick={() => {
-                setMethod('options');
-                setInputValue('');
-                setError('');
-              }}
-            >
-              Back to options
-            </button>
-          </form>
-        )}
+        <div className="relative flex items-center py-6">
+          <div className="flex-grow border-t border-gray-200" />
+          <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">
+            OR
+          </span>
+          <div className="flex-grow border-t border-gray-200" />
+        </div>
+
+        <button
+          type="button"
+          className="w-full flex items-center justify-center space-x-2 bg-white border border-gray-300 text-gray-700 px-4 py-3 rounded-xl hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+          onClick={() => {
+            setError('');
+            handleGoogleLogin();
+          }}
+          disabled={loading}
+        >
+          <span className="font-bold text-lg leading-none">G</span>
+          <span>
+            {loading ? 'Authenticating...' : 'Continue with Google'}
+          </span>
+        </button>
 
         <div className="mt-8 text-center text-sm text-gray-600">
           New user?{' '}
