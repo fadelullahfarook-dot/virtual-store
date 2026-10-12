@@ -1,7 +1,9 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Types, Document } from 'mongoose';
+import { IProduct } from './Product';
 
 export interface ICartItem {
-  productId: mongoose.Types.ObjectId;
+  _id?: Types.ObjectId;
+  productId: Types.ObjectId | (IProduct & { _id: Types.ObjectId });
   quantity: number;
   selectedVariant?: {
     color?: string;
@@ -11,33 +13,59 @@ export interface ICartItem {
 }
 
 export interface ICart extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId: Types.ObjectId;
   items: ICartItem[];
   subtotal: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const CartItemSchema: Schema = new Schema({
-  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-  quantity: { type: Number, required: true, min: 1 },
+const CartItemSchema = new Schema<ICartItem>({
+  productId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: 1
+  },
   selectedVariant: {
     color: { type: String },
     size: { type: String }
   },
-  price: { type: Number, required: true }
+  price: {
+    type: Number,
+    required: true
+  }
 });
 
-const CartSchema: Schema = new Schema(
+const CartSchema = new Schema<ICart>(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      unique: true
+    },
     items: [CartItemSchema],
-    subtotal: { type: Number, required: true, default: 0 }
+    subtotal: {
+      type: Number,
+      required: true,
+      default: 0
+    }
   },
   { timestamps: true }
 );
 
-// Pre-save middleware to calculate subtotal
-CartSchema.pre('save', function() {
-  this.subtotal = this.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+CartSchema.pre('save', function (this: ICart) {
+  this.subtotal = this.items.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
 });
 
-export default mongoose.model<ICart>('Cart', CartSchema);
+const Cart = mongoose.model<ICart>('Cart', CartSchema);
+
+export default Cart;

@@ -17,11 +17,22 @@ const transporter = nodemailer.createTransport({
 
 export const sendOtp = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { identifier, method } = req.body; // method: 'email' | 'phone'
+    const { identifier, method, isLogin } = req.body; // method: 'email' | 'phone'
     
     if (!identifier) {
       res.status(400).json({ message: 'Identifier is required' });
       return;
+    }
+
+    // If logging in, check if user exists first to give instant feedback
+    if (isLogin) {
+      const existingUser = await User.findOne({
+        $or: [{ email: identifier }, { phone: identifier }],
+      });
+      if (!existingUser) {
+        res.status(404).json({ message: `No account found with this ${method === 'phone' ? 'phone number' : 'email address'}. Please sign up first.` });
+        return;
+      }
     }
 
     // Check for recent OTP to implement cooldown
@@ -40,32 +51,43 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
       expiresAt,
     });
 
+    let emailSent = false;
     if (method === 'email' || identifier.includes('@')) {
       // Send real email OTP
       if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
         console.log(`[DEVELOPMENT] Email not configured. OTP for ${identifier} is ${otpCode}`);
       } else {
-        const mailOptions = {
-          from: `"Virtual Store" <${process.env.EMAIL_USER}>`,
-          to: identifier,
-          subject: 'Your Virtual Store Login Code',
-          text: `Your verification code is: ${otpCode}. It expires in 5 minutes.`,
-          html: `<div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-                  <h2>Welcome to Virtual Store!</h2>
-                  <p>Your verification code is:</p>
-                  <h1 style="color: #4f46e5; letter-spacing: 5px;">${otpCode}</h1>
-                  <p>This code expires in 5 minutes.</p>
-                 </div>`,
-        };
-        await transporter.sendMail(mailOptions);
-        console.log(`Email OTP sent to ${identifier}`);
+        try {
+          const mailOptions = {
+            from: `"Virtual Store" <${process.env.EMAIL_USER}>`,
+            to: identifier,
+            subject: 'Your Virtual Store Login Code',
+            text: `Your verification code is: ${otpCode}. It expires in 5 minutes.`,
+            html: `<div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+                    <h2>Welcome to Virtual Store!</h2>
+                    <p>Your verification code is:</p>
+                    <h1 style="color: #4f46e5; letter-spacing: 5px;">${otpCode}</h1>
+                    <p>This code expires in 5 minutes.</p>
+                   </div>`,
+          };
+          await transporter.sendMail(mailOptions);
+          console.log(`Email OTP sent to ${identifier}`);
+          emailSent = true;
+        } catch (emailErr) {
+          console.error('Failed to deliver email via SMTP:', emailErr);
+          // In development, allow user to continue even if email server hits network issue
+          console.log(`[DEVELOPMENT FALLBACK] OTP for ${identifier} is ${otpCode}`);
+        }
       }
     } else {
-      // For phone, just log it until SMS is configured
+      // For phone, log it until SMS provider is configured
       console.log(`[DEVELOPMENT] Phone OTP for ${identifier} is ${otpCode}`);
     }
 
-    res.status(200).json({ message: 'OTP sent successfully' });
+    res.status(200).json({ 
+      message: 'OTP sent successfully',
+      ...((method === 'phone' || !emailSent) ? { debugOtp: otpCode } : {})
+    });
   } catch (error) {
     console.error('Error in sendOtp:', error);
     res.status(500).json({ message: 'Server error while sending OTP' });

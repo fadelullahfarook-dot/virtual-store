@@ -53,12 +53,41 @@ export const Login = () => {
     onError: () => setError('Google Sign-In was cancelled or failed.'),
   });
 
-  const handleContinue = (e: React.FormEvent) => {
+  const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue) return;
     
     const finalValue = method === 'phone' ? `${countryCode}${inputValue}` : inputValue;
-    navigate('/verify-otp', { state: { method, value: finalValue, isNewUser: false } });
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: finalValue, method, isLogin: true }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to send OTP');
+      }
+
+      navigate('/verify-otp', { 
+        state: { 
+          method, 
+          value: finalValue, 
+          isNewUser: false,
+          debugOtp: data.debugOtp 
+        } 
+      });
+    } catch (err: any) {
+      console.error('Send OTP error:', err);
+      setError(err.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -146,9 +175,10 @@ export const Login = () => {
             </div>
             <button 
               type="submit"
-              className="w-full bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors"
+              disabled={loading}
+              className="w-full bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-60 flex justify-center items-center"
             >
-              Send OTP
+              {loading ? 'Sending OTP...' : 'Send OTP'}
             </button>
             <button 
               type="button"

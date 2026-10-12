@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Text } from '@react-three/drei';
 import type { StoreConfig } from '../../types';
 
@@ -7,8 +7,7 @@ interface StoreExteriorProps {
 }
 
 export const StoreExterior: React.FC<StoreExteriorProps> = ({ store }) => {
-  const [hovered, setHovered] = useState(false);
-  const { size, color, name, entrancePosition } = store;
+  const { size, color, name } = store;
   
   const [w, h, d] = size;
 
@@ -61,8 +60,6 @@ export const StoreExterior: React.FC<StoreExteriorProps> = ({ store }) => {
       <mesh 
         position={[0, 2.5, d/2]} 
         visible={false}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
       >
         <boxGeometry args={[3, 5, 1]} />
         <meshBasicMaterial transparent opacity={0} />

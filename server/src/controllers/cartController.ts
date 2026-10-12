@@ -6,9 +6,15 @@ import mongoose from 'mongoose';
 
 export const getCart = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    let cart = await Cart.findOne({ userId: req.user?.id }).populate('items.productId');
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Not authorized' });
+      return;
+    }
+
+    let cart = await Cart.findOne({ userId }).populate('items.productId');
     if (!cart) {
-      cart = await Cart.create({ userId: req.user?.id, items: [], subtotal: 0 });
+      cart = await Cart.create({ userId: new mongoose.Types.ObjectId(userId), items: [], subtotal: 0 });
     }
     res.json(cart);
   } catch (error) {
@@ -17,10 +23,28 @@ export const getCart = async (req: AuthRequest, res: Response): Promise<void> =>
   }
 };
 
+const getCartItemProductIdString = (item: ICartItem): string => {
+  if (item.productId instanceof mongoose.Types.ObjectId) {
+    return item.productId.toString();
+  }
+  return item.productId._id.toString();
+};
+
 export const addToCart = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Not authorized' });
+      return;
+    }
+
     const { productId, quantity, selectedVariant } = req.body;
     
+    if (!productId || typeof quantity !== 'number') {
+      res.status(400).json({ message: 'Product ID and quantity are required' });
+      return;
+    }
+
     const product = await Product.findById(productId);
     if (!product) {
       res.status(404).json({ message: 'Product not found' });
@@ -32,9 +56,9 @@ export const addToCart = async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    let cart = await Cart.findOne({ userId: req.user?.id });
+    let cart = await Cart.findOne({ userId });
     if (!cart) {
-      cart = await Cart.create({ userId: req.user?.id, items: [], subtotal: 0 });
+      cart = await Cart.create({ userId: new mongoose.Types.ObjectId(userId), items: [], subtotal: 0 });
     }
 
     // Determine variant string for matching
@@ -45,9 +69,10 @@ export const addToCart = async (req: AuthRequest, res: Response): Promise<void> 
              item.selectedVariant.size === selectedVariant.size;
     };
 
-    const existingItemIndex = cart.items.findIndex(item => 
-      item.productId.toString() === productId && variantMatch(item)
-    );
+    const existingItemIndex = cart.items.findIndex(item => {
+      const itemProdId = getCartItemProductIdString(item);
+      return itemProdId === productId && variantMatch(item);
+    });
 
     let price = product.price;
     if (selectedVariant && product.variants) {
@@ -58,7 +83,10 @@ export const addToCart = async (req: AuthRequest, res: Response): Promise<void> 
     }
 
     if (existingItemIndex > -1) {
-      cart.items[existingItemIndex].quantity += quantity;
+      const existingItem = cart.items[existingItemIndex];
+      if (existingItem) {
+        existingItem.quantity += quantity;
+      }
     } else {
       cart.items.push({
         productId: new mongoose.Types.ObjectId(productId),
@@ -71,8 +99,8 @@ export const addToCart = async (req: AuthRequest, res: Response): Promise<void> 
     await cart.save();
     
     // Return populated cart
-    cart = await Cart.findById(cart._id).populate('items.productId');
-    res.json(cart);
+    const populatedCart = await Cart.findById(cart._id).populate('items.productId');
+    res.json(populatedCart);
   } catch (error: any) {
     console.error('Error adding to cart:', error);
     res.status(500).json({ message: error.message || 'Server Error' });
@@ -81,9 +109,15 @@ export const addToCart = async (req: AuthRequest, res: Response): Promise<void> 
 
 export const updateCartItem = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Not authorized' });
+      return;
+    }
+
     const { productId, quantity, selectedVariant } = req.body;
 
-    const cart = await Cart.findOne({ userId: req.user?.id });
+    const cart = await Cart.findOne({ userId });
     if (!cart) {
       res.status(404).json({ message: 'Cart not found' });
       return;
@@ -96,15 +130,19 @@ export const updateCartItem = async (req: AuthRequest, res: Response): Promise<v
              item.selectedVariant.size === selectedVariant.size;
     };
 
-    const itemIndex = cart.items.findIndex(item => 
-      item.productId.toString() === productId && variantMatch(item)
-    );
+    const itemIndex = cart.items.findIndex(item => {
+      const itemProdId = getCartItemProductIdString(item);
+      return itemProdId === productId && variantMatch(item);
+    });
 
     if (itemIndex > -1) {
       if (quantity <= 0) {
         cart.items.splice(itemIndex, 1);
       } else {
-        cart.items[itemIndex].quantity = quantity;
+        const targetItem = cart.items[itemIndex];
+        if (targetItem) {
+          targetItem.quantity = quantity;
+        }
       }
       await cart.save();
       const updatedCart = await Cart.findById(cart._id).populate('items.productId');
@@ -120,10 +158,21 @@ export const updateCartItem = async (req: AuthRequest, res: Response): Promise<v
 
 export const removeFromCart = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Not authorized' });
+      return;
+    }
+
     const { productId } = req.params;
     const { color, size } = req.query;
 
-    const cart = await Cart.findOne({ userId: req.user?.id });
+    if (!productId) {
+      res.status(400).json({ message: 'Product ID is required' });
+      return;
+    }
+
+    const cart = await Cart.findOne({ userId });
     if (!cart) {
       res.status(404).json({ message: 'Cart not found' });
       return;
@@ -137,7 +186,10 @@ export const removeFromCart = async (req: AuthRequest, res: Response): Promise<v
       return false;
     };
 
-    cart.items = cart.items.filter(item => !(item.productId.toString() === productId && variantMatch(item)));
+    cart.items = cart.items.filter(item => {
+      const itemProdId = getCartItemProductIdString(item);
+      return !(itemProdId === productId && variantMatch(item));
+    });
 
     await cart.save();
     const updatedCart = await Cart.findById(cart._id).populate('items.productId');
@@ -150,7 +202,13 @@ export const removeFromCart = async (req: AuthRequest, res: Response): Promise<v
 
 export const clearCart = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const cart = await Cart.findOne({ userId: req.user?.id });
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Not authorized' });
+      return;
+    }
+
+    const cart = await Cart.findOne({ userId });
     if (cart) {
       cart.items = [];
       await cart.save();

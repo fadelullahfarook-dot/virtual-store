@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { User, CartItem, Cart, Product, StoreConfig, ProductConfig, Order, ShippingAddress } from '../types';
+import type { User, Cart, StoreConfig, ProductConfig, Order, ShippingAddress } from '../types';
 
 const API_URL = 'http://localhost:5000/api';
 

@@ -47,8 +47,12 @@ export interface Cart {
 
 export interface User {
   id: string;
-  username: string;
-  email: string;
+  name?: string;
+  username?: string;
+  email?: string;
+  phone?: string;
+  provider?: string;
+  profileImage?: string;
 }
 
 export type StoreCategory = 'fashion' | 'electronics' | 'grocery' | 'furniture';

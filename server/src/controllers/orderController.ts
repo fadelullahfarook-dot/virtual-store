@@ -11,6 +11,12 @@ const generateOrderNumber = () => {
 
 export const createOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Not authorized' });
+      return;
+    }
+
     const { shippingAddress, paymentMethod } = req.body;
 
     if (!shippingAddress || !paymentMethod) {
@@ -18,7 +24,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    const cart = await Cart.findOne({ userId: req.user?.id }).populate('items.productId');
+    const cart = await Cart.findOne({ userId }).populate('items.productId');
     
     if (!cart || cart.items.length === 0) {
       res.status(400).json({ message: 'Cart is empty' });
@@ -29,10 +35,11 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
     const orderItems = [];
 
     for (const item of cart.items) {
-      const product = await Product.findById(item.productId._id);
+      const prodId = '_id' in item.productId ? item.productId._id : item.productId;
+      const product = await Product.findById(prodId);
       
       if (!product) {
-        throw new Error(`Product not found: ${item.productId._id}`);
+        throw new Error(`Product not found: ${prodId}`);
       }
 
       // Check stock
@@ -66,13 +73,16 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
         subtotal: itemSubtotal
       });
 
-      // Update product stock
+      // Update product stock safely
       if (item.selectedVariant && product.variants) {
         const variantIndex = product.variants.findIndex(
           v => v.color === item.selectedVariant?.color && v.size === item.selectedVariant?.size
         );
         if (variantIndex > -1) {
-          product.variants[variantIndex].stock -= item.quantity;
+          const targetVariant = product.variants[variantIndex];
+          if (targetVariant) {
+            targetVariant.stock -= item.quantity;
+          }
         }
       } else {
         product.stock -= item.quantity;
@@ -88,7 +98,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
     const orderStatus = paymentMethod === 'Test Online Payment' ? 'Confirmed' : 'Pending';
 
     const order = new Order({
-      userId: req.user?.id,
+      userId: new mongoose.Types.ObjectId(userId),
       orderNumber: generateOrderNumber(),
       items: orderItems,
       shippingAddress,
@@ -107,8 +117,6 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
     cart.subtotal = 0;
     await cart.save();
 
-
-
     res.status(201).json(order);
   } catch (error: any) {
     console.error('Error creating order:', error);
@@ -118,7 +126,13 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
 
 export const getOrders = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const orders = await Order.find({ userId: req.user?.id }).sort({ createdAt: -1 });
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Not authorized' });
+      return;
+    }
+
+    const orders = await Order.find({ userId }).sort({ createdAt: -1 });
     res.json(orders);
   } catch (error) {
     console.error('Error fetching orders:', error);
@@ -128,7 +142,19 @@ export const getOrders = async (req: AuthRequest, res: Response): Promise<void> 
 
 export const getOrderById = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const order = await Order.findOne({ _id: req.params.id, userId: req.user?.id });
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Not authorized' });
+      return;
+    }
+
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ message: 'Order ID is required' });
+      return;
+    }
+
+    const order = await Order.findOne({ _id: id, userId });
     
     if (!order) {
       res.status(404).json({ message: 'Order not found' });
@@ -144,7 +170,19 @@ export const getOrderById = async (req: AuthRequest, res: Response): Promise<voi
 
 export const cancelOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const order = await Order.findOne({ _id: req.params.id, userId: req.user?.id });
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Not authorized' });
+      return;
+    }
+
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ message: 'Order ID is required' });
+      return;
+    }
+
+    const order = await Order.findOne({ _id: id, userId });
     
     if (!order) {
       res.status(404).json({ message: 'Order not found' });
@@ -161,7 +199,7 @@ export const cancelOrder = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // Revert stock
+    // Revert stock safely
     for (const item of order.items) {
       const product = await Product.findById(item.productId);
       if (product) {
@@ -170,7 +208,10 @@ export const cancelOrder = async (req: AuthRequest, res: Response): Promise<void
             v => v.color === item.selectedVariant?.color && v.size === item.selectedVariant?.size
           );
           if (variantIndex > -1) {
-            product.variants[variantIndex].stock += item.quantity;
+            const targetVariant = product.variants[variantIndex];
+            if (targetVariant) {
+              targetVariant.stock += item.quantity;
+            }
           }
         } else {
           product.stock += item.quantity;
@@ -181,8 +222,6 @@ export const cancelOrder = async (req: AuthRequest, res: Response): Promise<void
 
     order.orderStatus = 'Cancelled';
     await order.save();
-    
-
 
     res.json(order);
   } catch (error) {

@@ -1,7 +1,8 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Types, Document } from 'mongoose';
 
 export interface IOrderItem {
-  productId: mongoose.Types.ObjectId;
+  _id?: Types.ObjectId;
+  productId: Types.ObjectId;
   productName: string;
   price: number;
   quantity: number;
@@ -13,7 +14,7 @@ export interface IOrderItem {
 }
 
 export interface IOrder extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId: Types.ObjectId;
   orderNumber: string;
   items: IOrderItem[];
   shippingAddress: {
@@ -30,13 +31,23 @@ export interface IOrder extends Document {
   totalAmount: number;
   paymentMethod: 'Cash on Delivery' | 'Test Online Payment';
   paymentStatus: 'Pending' | 'Paid' | 'Failed';
-  orderStatus: 'Pending' | 'Confirmed' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+  orderStatus:
+    | 'Pending'
+    | 'Confirmed'
+    | 'Processing'
+    | 'Shipped'
+    | 'Delivered'
+    | 'Cancelled';
   createdAt: Date;
   updatedAt: Date;
 }
 
-const OrderItemSchema: Schema = new Schema({
-  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+const OrderItemSchema = new Schema<IOrderItem>({
+  productId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true
+  },
   productName: { type: String, required: true },
   price: { type: Number, required: true },
   quantity: { type: Number, required: true, min: 1 },
@@ -47,10 +58,18 @@ const OrderItemSchema: Schema = new Schema({
   subtotal: { type: Number, required: true }
 });
 
-const OrderSchema: Schema = new Schema(
+const OrderSchema = new Schema<IOrder>(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    orderNumber: { type: String, required: true, unique: true },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    orderNumber: {
+      type: String,
+      required: true,
+      unique: true
+    },
     items: [OrderItemSchema],
     shippingAddress: {
       fullName: { type: String, required: true },
@@ -64,11 +83,32 @@ const OrderSchema: Schema = new Schema(
     subtotal: { type: Number, required: true },
     deliveryFee: { type: Number, required: true, default: 0 },
     totalAmount: { type: Number, required: true },
-    paymentMethod: { type: String, enum: ['Cash on Delivery', 'Test Online Payment'], required: true },
-    paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending' },
-    orderStatus: { type: String, enum: ['Pending', 'Confirmed', 'Processing', 'Shipped', 'Delivered', 'Cancelled'], default: 'Pending' }
+    paymentMethod: {
+      type: String,
+      enum: ['Cash on Delivery', 'Test Online Payment'],
+      required: true
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['Pending', 'Paid', 'Failed'],
+      default: 'Pending'
+    },
+    orderStatus: {
+      type: String,
+      enum: [
+        'Pending',
+        'Confirmed',
+        'Processing',
+        'Shipped',
+        'Delivered',
+        'Cancelled'
+      ],
+      default: 'Pending'
+    }
   },
   { timestamps: true }
 );
 
-export default mongoose.model<IOrder>('Order', OrderSchema);
+const Order = mongoose.model<IOrder>('Order', OrderSchema);
+
+export default Order;

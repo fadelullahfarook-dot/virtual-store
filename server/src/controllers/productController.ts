@@ -27,7 +27,12 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
 
 export const getProductsByStore = async (req: Request, res: Response): Promise<void> => {
   try {
-    const products = await Product.find({ storeId: req.params.storeId });
+    const { storeId } = req.params;
+    if (!storeId) {
+      res.status(400).json({ message: 'Store ID is required' });
+      return;
+    }
+    const products = await Product.find({ storeId });
     res.json(products);
   } catch (error) {
     console.error('Error fetching products by store:', error);
@@ -37,7 +42,12 @@ export const getProductsByStore = async (req: Request, res: Response): Promise<v
 
 export const getProductsByCategory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const products = await Product.find({ category: req.params.category });
+    const { category } = req.params;
+    if (!category) {
+      res.status(400).json({ message: 'Category is required' });
+      return;
+    }
+    const products = await Product.find({ category });
     res.json(products);
   } catch (error) {
     console.error('Error fetching products by category:', error);

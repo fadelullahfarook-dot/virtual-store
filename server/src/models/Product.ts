@@ -20,16 +20,18 @@ export interface IProduct extends Document {
   position?: [number, number, number];
   rotation?: [number, number, number];
   displayType?: 'shelf' | 'table' | 'rack' | 'floor';
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const VariantSchema: Schema = new Schema({
+const VariantSchema = new Schema<IVariant>({
   color: { type: String },
   size: { type: String },
   additionalPrice: { type: Number, default: 0 },
-  stock: { type: Number, required: true, default: 0 },
+  stock: { type: Number, required: true, default: 0 }
 });
 
-const ProductSchema: Schema = new Schema(
+const ProductSchema = new Schema<IProduct>(
   {
     name: { type: String, required: true },
     description: { type: String, required: true },
@@ -40,13 +42,17 @@ const ProductSchema: Schema = new Schema(
     imageUrl: { type: String },
     stock: { type: Number, required: true, default: 0 },
     variants: [VariantSchema],
-    
-    // For 3D display integration
+
     position: { type: [Number], index: false },
     rotation: { type: [Number], index: false },
-    displayType: { type: String, enum: ['shelf', 'table', 'rack', 'floor'] }
+    displayType: {
+      type: String,
+      enum: ['shelf', 'table', 'rack', 'floor']
+    }
   },
   { timestamps: true }
 );
 
-export default mongoose.model<IProduct>('Product', ProductSchema);
+const Product = mongoose.model<IProduct>('Product', ProductSchema);
+
+export default Product;
