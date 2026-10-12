@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -6,13 +7,15 @@ import { useStore } from '../store/useStore';
 export const Signup = () => {
   const navigate = useNavigate();
   const { login } = useStore();
+
   const [name, setName] = useState('');
   const [contactMethod, setContactMethod] = useState<'phone' | 'email'>('email');
   const [contactValue, setContactValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
 
-  const [countryCode, setCountryCode] = useState('+1');
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const COUNTRIES = [
     { code: '+1', label: 'US/CA (+1)' },
@@ -24,65 +27,121 @@ export const Signup = () => {
     { code: '+33', label: 'FR (+33)' },
   ];
 
+  // Google Signup
   const handleGoogleSignup = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
+      if (!API_URL) {
+        setError('API URL is not configured.');
+        return;
+      }
+
       setLoading(true);
       setError('');
+
       try {
-        const res = await fetch('http://localhost:5000/api/auth/google', {
+        const res = await fetch(`${API_URL}/api/auth/google`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: tokenResponse.access_token }),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            token: tokenResponse.access_token,
+          }),
         });
-        
+
+        const data = await res.json().catch(() => ({}));
+
         if (!res.ok) {
-          throw new Error('Google authentication failed on backend.');
+          throw new Error(
+            data.message || 'Google authentication failed on backend.'
+          );
         }
 
-        const data = await res.json();
+        if (!data.token || !data.user) {
+          throw new Error('Invalid response received from the server.');
+        }
+
         login(data.token, data.user);
         navigate('/store');
       } catch (err) {
-        console.error('Google Auth Error:', err);
-        setError('Google Sign-Up failed. Please try again.');
+        console.error('Google Signup Error:', err);
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Google Sign-Up failed. Please try again.'
+        );
       } finally {
         setLoading(false);
       }
     },
-    onError: () => setError('Google Sign-Up was cancelled or failed.'),
+
+    onError: () => {
+      setError('Google Sign-Up was cancelled or failed.');
+    },
   });
 
+  // Email / Phone Signup
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !contactValue) return;
 
-    const finalValue = contactMethod === 'phone' ? `${countryCode}${contactValue}` : contactValue;
+    setError('');
 
-    navigate('/verify-otp', { 
-      state: { 
-        method: contactMethod, 
-        value: finalValue, 
+    if (!name.trim()) {
+      setError('Please enter your full name.');
+      return;
+    }
+
+    if (!contactValue.trim()) {
+      setError('Please enter your email or phone number.');
+      return;
+    }
+
+    const finalValue =
+      contactMethod === 'phone'
+        ? `${countryCode}${contactValue.trim()}`
+        : contactValue.trim();
+
+    navigate('/verify-otp', {
+      state: {
+        method: contactMethod,
+        value: finalValue,
         isNewUser: true,
-        name 
-      } 
+        name: name.trim(),
+      },
     });
   };
 
   return (
     <div className="flex-grow flex items-center justify-center p-4">
       <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-gray-100">
-        <h2 className="text-3xl font-bold text-center text-gray-900 mb-2">Create Account</h2>
-        <p className="text-center text-gray-500 mb-6">Join Virtual Store today</p>
+        <h2 className="text-3xl font-bold text-center text-gray-900 mb-2">
+          Create Account
+        </h2>
 
-        {error && <div className="mb-4 text-red-600 text-sm font-medium text-center bg-red-50 py-2 rounded-lg">{error}</div>}
+        <p className="text-center text-gray-500 mb-6">
+          Join Virtual Store today
+        </p>
+
+        {error && (
+          <div
+            role="alert"
+            className="mb-4 text-red-600 text-sm font-medium text-center bg-red-50 py-2 rounded-lg"
+          >
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Full Name
+            </label>
+
             <input
               type="text"
               className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 outline-none transition-all"
-              placeholder="John Doe"
+              placeholder="Enter your full name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -92,16 +151,26 @@ export const Signup = () => {
           <div>
             <div className="flex justify-between mb-1">
               <label className="block text-sm font-medium text-gray-700">
-                {contactMethod === 'email' ? 'Email Address' : 'Phone Number'}
+                {contactMethod === 'email'
+                  ? 'Email Address'
+                  : 'Phone Number'}
               </label>
-              <button 
-                type="button" 
+
+              <button
+                type="button"
                 className="text-xs text-indigo-600 hover:underline"
-                onClick={() => setContactMethod(contactMethod === 'email' ? 'phone' : 'email')}
+                onClick={() => {
+                  setContactMethod(
+                    contactMethod === 'email' ? 'phone' : 'email'
+                  );
+                  setContactValue('');
+                  setError('');
+                }}
               >
                 Use {contactMethod === 'email' ? 'Phone' : 'Email'} instead
               </button>
             </div>
+
             {contactMethod === 'phone' ? (
               <div className="flex gap-2">
                 <select
@@ -109,16 +178,17 @@ export const Signup = () => {
                   onChange={(e) => setCountryCode(e.target.value)}
                   className="w-1/3 px-2 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 outline-none transition-all bg-white"
                 >
-                  {COUNTRIES.map(country => (
+                  {COUNTRIES.map((country) => (
                     <option key={country.code} value={country.code}>
                       {country.label}
                     </option>
                   ))}
                 </select>
+
                 <input
                   type="tel"
                   className="w-2/3 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 outline-none transition-all"
-                  placeholder="(555) 000-0000"
+                  placeholder="9876543210"
                   value={contactValue}
                   onChange={(e) => setContactValue(e.target.value)}
                   required
@@ -136,31 +206,46 @@ export const Signup = () => {
             )}
           </div>
 
-          <button 
+          <button
             type="submit"
-            className="w-full bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors mt-2"
+            disabled={loading}
+            className="w-full bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors mt-2 disabled:opacity-60"
           >
-            Send OTP
+            Continue to OTP
           </button>
         </form>
 
         <div className="relative flex items-center py-6">
-          <div className="flex-grow border-t border-gray-200"></div>
-          <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">OR</span>
-          <div className="flex-grow border-t border-gray-200"></div>
+          <div className="flex-grow border-t border-gray-200" />
+          <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">
+            OR
+          </span>
+          <div className="flex-grow border-t border-gray-200" />
         </div>
 
-        <button 
+        <button
+          type="button"
           className="w-full flex items-center justify-center space-x-2 bg-white border border-gray-300 text-gray-700 px-4 py-3 rounded-xl hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
-          onClick={() => handleGoogleSignup()}
+          onClick={() => {
+            setError('');
+            handleGoogleSignup();
+          }}
           disabled={loading}
         >
           <span className="font-bold text-lg leading-none">G</span>
-          <span>{loading ? 'Authenticating...' : 'Sign up with Google'}</span>
+          <span>
+            {loading ? 'Authenticating...' : 'Sign up with Google'}
+          </span>
         </button>
 
         <div className="mt-8 text-center text-sm text-gray-600">
-          Already have an account? <Link to="/login" className="text-indigo-600 font-bold hover:underline">Login</Link>
+          Already have an account?{' '}
+          <Link
+            to="/login"
+            className="text-indigo-600 font-bold hover:underline"
+          >
+            Login
+          </Link>
         </div>
       </div>
     </div>
