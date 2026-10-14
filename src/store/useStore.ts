@@ -113,6 +113,8 @@ export const useStore = create<AppState>((set, get) => ({
       if (res.ok) {
         const cart = await res.json();
         set({ cart });
+      } else if (res.status === 401) {
+        get().logout();
       }
     } catch (err) {
       console.error('Failed to fetch cart', err);
@@ -121,7 +123,9 @@ export const useStore = create<AppState>((set, get) => ({
 
   addToCart: async (productId, quantity, selectedVariant) => {
     const token = get().token;
-    if (!token) return;
+    if (!token) {
+      throw new Error('Please log in to add items to your cart.');
+    }
 
     try {
       const res = await fetch(`${API_URL}/cart/add`, {
@@ -138,6 +142,10 @@ export const useStore = create<AppState>((set, get) => ({
         set({ cart });
       } else {
         const data = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          get().logout();
+          throw new Error('Your session has expired. Please log in again.');
+        }
         throw new Error(data.message || 'Failed to add to cart');
       }
     } catch (err) {

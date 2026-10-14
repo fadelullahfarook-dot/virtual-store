@@ -15,6 +15,7 @@ import { OrderSuccess } from './pages/OrderSuccess';
 import { MyOrders } from './pages/MyOrders';
 import { OrderDetails } from './pages/OrderDetails';
 import { Cart } from './components/Cart';
+import { MinimalAframeScene } from './3d/components/MinimalAframeScene';
 
 function App() {
   const fetchProducts = useStore(state => state.fetchProducts);
@@ -50,6 +51,8 @@ function App() {
           <Route path="/order-success" element={<OrderSuccess />} />
           <Route path="/orders" element={<MyOrders />} />
           <Route path="/orders/:id" element={<OrderDetails />} />
+          <Route path="/aframe-test" element={<MinimalAframeScene />} />
+          <Route path="/aframe-store" element={<StorePage />} />
         </Route>
 
         {/* Protected Routes (3D Store without traditional layout wrapper, or with minimal overlay) */}

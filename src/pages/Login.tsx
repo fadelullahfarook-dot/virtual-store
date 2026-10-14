@@ -71,7 +71,7 @@ export const Login = () => {
     },
 
     onError: () => {
-      setError('Google Sign-In was cancelled or failed.');
+      setError('Google Sign-In blocked (origin_mismatch): Please add http://localhost:5174 to Authorized JavaScript Origins in Google Cloud Console, or use Email OTP below.');
     },
   });
 

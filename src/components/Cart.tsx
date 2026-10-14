@@ -45,9 +45,16 @@ export const Cart: React.FC = () => {
                 cart.items.map((item, idx) => {
                   const pId = typeof item.productId === 'object' ? (item.productId as any)._id : item.productId;
                   const name = typeof item.productId === 'object' ? (item.productId as any).name : 'Product';
+                  const imgUrl = typeof item.productId === 'object' ? (item.productId as any).imageUrl : null;
                   return (
                   <div key={idx} className="flex gap-4 border-b pb-4">
-                    <div className="w-20 h-20 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-400">Img</div>
+                    <div className="w-20 h-20 bg-gray-100 rounded overflow-hidden flex items-center justify-center flex-shrink-0 border border-gray-200">
+                      {imgUrl ? (
+                        <img src={imgUrl} alt={name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs text-gray-400">Img</span>
+                      )}
+                    </div>
                     <div className="flex-grow">
                       <h3 className="font-semibold text-gray-900">{name}</h3>
                       {item.selectedVariant && (

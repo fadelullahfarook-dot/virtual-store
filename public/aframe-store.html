@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Shopping Mall - A-Frame Virtual Store</title>
+  <!-- Load A-Frame 1.6.0 Standalone Engine -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+    }
+
+    #hud-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .interactive {
+      pointer-events: auto;
+    }
+
+    /* Top Quick Navigation Toolbar */
+    .quick-nav {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(10px);
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .quick-nav span {
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-right: 4px;
+    }
+
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      background: #4f46e5;
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    }
+
+    .nav-btn.active {
+      background: #4f46e5;
+      color: #ffffff;
+      border-color: #818cf8;
+    }
+
+    /* Controls helper banner at bottom */
+    .controls-info {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(8px);
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e2e8f0;
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .key-badge {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: bold;
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    /* Standalone Product Preview Modal (Fallback) */
+    #standalone-modal {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 340px;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      z-index: 100;
+      pointer-events: auto;
+      animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalPop {
+      0% { opacity: 0; transform: translate(-50%, -46%) scale(0.95); }
+      100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    #modal-image-container {
+      width: 100%;
+      height: 180px;
+      background: #f1f5f9;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #modal-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #modal-close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    #modal-body {
+      padding: 16px;
+    }
+
+    #modal-category {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #6366f1;
+      letter-spacing: 0.5px;
+    }
+
+    #modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 4px 0 8px 0;
+    }
+
+    #modal-desc {
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.4;
+      margin-bottom: 12px;
+      max-height: 60px;
+      overflow-y: auto;
+    }
+
+    #modal-price-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    #modal-price {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    #modal-action-btn {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #modal-action-btn:hover {
+      background: #4338ca;
+    }
+  </style>
+
+  <script>
+    // Robust Product Plaque Component for A-Frame
+    AFRAME.registerComponent('product-plaque', {
+      schema: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        price: { type: 'number' },
+        category: { type: 'string' },
+        imageUrl: { type: 'string' },
+        description: { type: 'string' },
+        storeId: { type: 'string' }
+      },
+      init: function () {
+        var self = this;
+        var onPlaqueClick = function (evt) {
+          if (evt && evt.stopPropagation) evt.stopPropagation();
+          console.log('[A-Frame] Clicked product plaque:', self.data.name, self.data.id);
+          window.handleProductSelection(self.data);
+        };
+
+        this.el.addEventListener('click', onPlaqueClick);
+
+        // Also ensure all child meshes inherit the click trigger
+        this.el.addEventListener('loaded', function () {
+          var children = self.el.querySelectorAll('.clickable');
+          children.forEach(function (child) {
+            child.addEventListener('click', onPlaqueClick);
+          });
+        });
+      }
+    });
+
+    // Mall Navigation Bounds (Keeps player inside corridors and shop rooms)
+    AFRAME.registerComponent('mall-navigation-bounds', {
+      tick: function () {
+        var pos = this.el.object3D.position;
+        pos.y = 1.6; // Keep constant eye level
+
+        // Mall length boundaries
+        if (pos.z > 9.0) pos.z = 9.0;
+        if (pos.z < -72.0) pos.z = -72.0;
+
+        // Mall outer width boundaries
+        if (pos.x < -17.2) pos.x = -17.2;
+        if (pos.x > 17.2) pos.x = 17.2;
+
+        // Central Hallway walls (X = -5.8 to X = 5.8)
+        // West Hallway wall with 2 boutique doorways
+        if (pos.x < -5.6 && pos.x > -6.4) {
+          var inShop1Door = (pos.z <= -13.0 && pos.z >= -17.0);
+          var inShop2Door = (pos.z <= -48.0 && pos.z >= -52.0);
+          if (!inShop1Door && !inShop2Door) {
+            pos.x = -5.6;
+          }
+        }
+
+        // East Hallway wall with 2 boutique doorways
+        if (pos.x > 5.6 && pos.x < 6.4) {
+          var inShop3Door = (pos.z <= -13.0 && pos.z >= -17.0);
+          var inShop4Door = (pos.z <= -48.0 && pos.z >= -52.0);
+          if (!inShop3Door && !inShop4Door) {
+            pos.x = 5.6;
+          }
+        }
+
+        // West shops interior perimeter clamps
+        if (pos.x < -6.4) {
+          // Shop 1 (Z: -8.5 to -21.5)
+          if (pos.z > -28.0 && pos.z < -4.0) {
+            if (pos.z > -8.5) pos.z = -8.5;
+            if (pos.z < -21.5) pos.z = -21.5;
+          }
+          // Shop 2 (Z: -43.5 to -56.5)
+          if (pos.z > -62.0 && pos.z < -38.0) {
+            if (pos.z > -43.5) pos.z = -43.5;
+            if (pos.z < -56.5) pos.z = -56.5;
+          }
+        }
+
+        // East shops interior perimeter clamps
+        if (pos.x > 6.4) {
+          // Shop 3 (Z: -8.5 to -21.5)
+          if (pos.z > -28.0 && pos.z < -4.0) {
+            if (pos.z > -8.5) pos.z = -8.5;
+            if (pos.z < -21.5) pos.z = -21.5;
+          }
+          // Shop 4 (Z: -43.5 to -56.5)
+          if (pos.z > -62.0 && pos.z < -38.0) {
+            if (pos.z > -43.5) pos.z = -43.5;
+            if (pos.z < -56.5) pos.z = -56.5;
+          }
+        }
+      }
+    });
+  </script>
+</head>
+<body>
+
+  <!-- 3D A-Frame Mall Scene -->
+  <a-scene
+    embedded
+    vr-mode-ui="enabled: false"
+    cursor="rayOrigin: mouse"
+    raycaster="objects: .clickable"
+    background="color: #0b1329"
+    style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;"
+  >
+    <!-- Asset Library -->
+    <a-assets timeout="10000">
+      <img id="img-phone" src="/images/smartphone.jpg" crossorigin="anonymous">
+      <img id="img-laptop" src="/images/laptop.jpg" crossorigin="anonymous">
+      <img id="img-tshirt" src="/images/tshirt.jpg" crossorigin="anonymous">
+      <img id="img-jeans" src="/images/jeans.jpg" crossorigin="anonymous">
+      <img id="img-sneakers" src="/images/sneakers.jpg" crossorigin="anonymous">
+      <img id="img-sofa" src="/images/sofa.jpg" crossorigin="anonymous">
+    </a-assets>
+
+    <!-- Sky -->
+    <a-sky color="#0f172a"></a-sky>
+
+    <!-- Mall Architectural Lighting -->
+    <a-light type="ambient" color="#f8fafc" intensity="0.65"></a-light>
+    
+    <!-- Concourse Overhead Lighting -->
+    <a-light type="directional" position="0 25 0" target="#concourse-center" intensity="0.85"></a-light>
+    <a-light type="point" position="0 5 -15" intensity="1.2" distance="18" color="#f8fafc"></a-light>
+    <a-light type="point" position="0 5 -35" intensity="1.2" distance="18" color="#f8fafc"></a-light>
+    <a-light type="point" position="0 5 -55" intensity="1.2" distance="18" color="#f8fafc"></a-light>
+    
+    <!-- Boutique Accent Lighting -->
+    <a-light type="point" position="-12 4.2 -15" intensity="1.6" distance="14" color="#e0f2fe"></a-light>
+    <a-light type="point" position="-12 4.2 -50" intensity="1.6" distance="14" color="#fff1f2"></a-light>
+    <a-light type="point" position="12 4.2 -15" intensity="1.6" distance="14" color="#eef2ff"></a-light>
+    <a-light type="point" position="12 4.2 -50" intensity="1.6" distance="14" color="#fefce8"></a-light>
+
+    <!-- ============================================================== -->
+    <!-- MALL CONCOURSE (CENTRAL BOULEVARD)                             -->
+    <!-- Hallway Width: 12m (X: -6 to +6), Length: 88m (Z: +10 to -74) -->
+    <!-- ============================================================== -->
+    <a-plane 
+      id="concourse-center"
+      position="0 0.01 -32" 
+      rotation="-90 0 0" 
+      width="12" 
+      height="88" 
+      color="#0f172a" 
+      material="roughness: 0.2; metalness: 0.15"
+    ></a-plane>
+
+    <!-- Center Marble Runner Path -->
+    <a-plane position="0 0.02 -32" rotation="-90 0 0" width="3.2" height="88" color="#1e293b" material="roughness: 0.1"></a-plane>
+
+    <!-- Concourse Grand Ceiling with Glass Skylight Ribbon -->
+    <a-plane position="0 6.0 -32" rotation="90 0 0" width="12" height="88" color="#0f172a" material="roughness: 0.8"></a-plane>
+    <a-plane position="0 5.95 -32" rotation="90 0 0" width="2.6" height="88" color="#38bdf8" material="emissive: #0284c7; emissiveIntensity: 0.4"></a-plane>
+
+    <!-- Concourse Planters -->
+    <a-entity position="0 0 2">
+      <a-box position="0 0.4 0" width="2.2" height="0.8" depth="2.2" color="#334155" material="roughness: 0.4"></a-box>
+      <a-cylinder position="0 1.2 0" radius="0.9" height="1.2" color="#15803d" material="roughness: 0.9"></a-cylinder>
+      <a-sphere position="0 1.8 0" radius="0.8" color="#16a34a"></a-sphere>
+    </a-entity>
+    <a-entity position="0 0 -32">
+      <a-box position="0 0.4 0" width="2.2" height="0.8" depth="2.2" color="#334155" material="roughness: 0.4"></a-box>
+      <a-cylinder position="0 1.2 0" radius="0.9" height="1.2" color="#15803d" material="roughness: 0.9"></a-cylinder>
+      <a-sphere position="0 1.8 0" radius="0.8" color="#16a34a"></a-sphere>
+    </a-entity>
+    <a-entity position="0 0 -65">
+      <a-box position="0 0.4 0" width="2.2" height="0.8" depth="2.2" color="#334155" material="roughness: 0.4"></a-box>
+      <a-cylinder position="0 1.2 0" radius="0.9" height="1.2" color="#15803d" material="roughness: 0.9"></a-cylinder>
+      <a-sphere position="0 1.8 0" radius="0.8" color="#16a34a"></a-sphere>
+    </a-entity>
+
+    <!-- Concourse Teak Benches -->
+    <a-entity position="0 0 -16">
+      <a-box position="0 0.4 0" width="2.6" height="0.1" depth="0.9" color="#78350f"></a-box>
+      <a-cylinder position="-1.1 0.2 0" radius="0.06" height="0.4" color="#0f172a"></a-cylinder>
+      <a-cylinder position="1.1 0.2 0" radius="0.06" height="0.4" color="#0f172a"></a-cylinder>
+    </a-entity>
+    <a-entity position="0 0 -50">
+      <a-box position="0 0.4 0" width="2.6" height="0.1" depth="0.9" color="#78350f"></a-box>
+      <a-cylinder position="-1.1 0.2 0" radius="0.06" height="0.4" color="#0f172a"></a-cylinder>
+      <a-cylinder position="1.1 0.2 0" radius="0.06" height="0.4" color="#0f172a"></a-cylinder>
+    </a-entity>
+
+    <!-- South Mall Grand Glass Entrance Arch (Z = +10) -->
+    <a-box position="0 3 10" width="12" height="6" depth="0.4" color="#0f172a" material="opacity: 0.9"></a-box>
+    <a-text value="VIRTUAL STORE MALL" position="0 4.2 9.7" align="center" width="9" color="#38bdf8" font="roboto"></a-text>
+
+    <!-- North Terminal Lounge Wall (Z = -74) -->
+    <a-box position="0 3 -74" width="12" height="6" depth="0.5" color="#1e293b"></a-box>
+    <a-text value="MALL PROMENADE LOUNGE" position="0 3.8 -73.7" align="center" width="7" color="#94a3b8" font="roboto"></a-text>
+
+
+    <!-- ============================================================== -->
+    <!-- SHOP 1: TECH GADGETS (ELECTRONICS)                             -->
+    <!-- Position: X: -6 to -18 (W 12m), Z: -8 to -22 (D 14m), H: 5m    -->
+    <!-- Center: (-12, 0, -15) | Entrance: X = -6 (Z: -13.5 to -16.5)   -->
+    <!-- ============================================================== -->
+    <a-entity id="shop1-container">
+      <a-entity id="shop1-center" position="-12 0 -15"></a-entity>
+
+      <!-- Floor: Polished Dark Tech Slate -->
+      <a-plane position="-12 0.02 -15" rotation="-90 0 0" width="12" height="14" color="#0f172a" material="roughness: 0.15; metalness: 0.2"></a-plane>
+      <!-- Ceiling -->
+      <a-plane position="-12 5.0 -15" rotation="90 0 0" width="12" height="14" color="#1e293b" material="roughness: 0.8"></a-plane>
+
+      <!-- Perimeter Walls -->
+      <!-- Back Wall (North, Z = -22) -->
+      <a-box position="-12 2.5 -22" width="12" height="5" depth="0.4" color="#1e293b"></a-box>
+      <!-- Far Wall (West, X = -18) -->
+      <a-box position="-18 2.5 -15" width="0.4" height="5" depth="14" color="#1e293b"></a-box>
+      <!-- Front Wall (South, Z = -8) -->
+      <a-box position="-12 2.5 -8" width="12" height="5" depth="0.4" color="#1e293b"></a-box>
+
+      <!-- Entrance Facade on Concourse side (X = -6) with 3m Wide Doorway -->
+      <a-box position="-6 2.5 -19.25" width="0.4" height="5" depth="5.5" color="#0f172a"></a-box>
+      <a-box position="-6 2.5 -10.75" width="0.4" height="5" depth="5.5" color="#0f172a"></a-box>
+      <a-box position="-6 4.3 -15" width="0.5" height="1.4" depth="3.0" color="#0f172a"></a-box>
+
+      <!-- Store Entrance Signboard -->
+      <a-entity position="-5.7 4.3 -15" rotation="0 90 0">
+        <a-box width="2.8" height="0.9" depth="0.15" color="#0369a1" material="emissive: #0284c7; emissiveIntensity: 0.4"></a-box>
+        <a-text value="TECH GADGETS" align="center" position="0 0.12 0.1" width="4.8" color="#ffffff" font="roboto"></a-text>
+        <a-text value="ELECTRONICS & COMPUTING" align="center" position="0 -0.2 0.1" width="3.2" color="#bae6fd" font="roboto"></a-text>
+      </a-entity>
+
+      <!-- Center Display Counter (Island Table) -->
+      <a-box position="-12 0.45 -15" width="2.6" height="0.9" depth="1.2" color="#0284c7">
+        <a-plane position="0 0.46 0" rotation="-90 0 0" width="2.7" height="1.3" color="#38bdf8"></a-plane>
+      </a-box>
+
+      <!-- WALL MOUNTED PRODUCT PLAQUES (SHOP 1) -->
+      <!-- Perfectly measured: Plaque Width 2.0, Height 2.2, Eye-Level Y = 1.9 -->
+
+      <!-- WEST WALL (X = -17.75, facing East / rotation 0 90 0) -->
+      <!-- Product 1: Smartphone Pro (Z = -18.0) -->
+      <a-entity position="-17.75 1.9 -18.0" rotation="0 90 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d717269541e; name: Smartphone Pro; price: 899; category: electronics; imageUrl: /images/smartphone.jpg; description: Latest high-end smartphone with OLED display and advanced camera.; storeId: tech-gadgets">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="/images/smartphone.jpg" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Smartphone Pro" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 899" align="center" position="0 -0.62 0.055" width="3.8" color="#38bdf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#0284c7">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 2: Smart Watch Pro (Z = -15.0) -->
+      <a-entity position="-17.75 1.9 -15.0" rotation="0 90 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695441; name: Smart Watch Pro; price: 199; category: electronics; imageUrl: https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80; description: Advanced health monitoring smartwatch with AMOLED touch display.; storeId: tech-gadgets">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Smart Watch Pro" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 199" align="center" position="0 -0.62 0.055" width="3.8" color="#38bdf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#0284c7">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 3: Tablet Air 11 (Z = -12.0) -->
+      <a-entity position="-17.75 1.9 -12.0" rotation="0 90 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695442; name: Tablet Air 11; price: 449; category: electronics; imageUrl: https://images.unsplash.com/photo-1561154464-82e9adf32764?w=500&q=80; description: High performance 11-inch tablet with stylus support.; storeId: tech-gadgets">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1561154464-82e9adf32764?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Tablet Air 11" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 449" align="center" position="0 -0.62 0.055" width="3.8" color="#38bdf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#0284c7">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- NORTH WALL (Z = -21.75, facing South / rotation 0 0 0) -->
+      <!-- Product 4: Laptop Ultra (X = -15.0) -->
+      <a-entity position="-15.0 1.9 -21.75" rotation="0 0 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695421; name: Laptop Ultra; price: 1299; category: electronics; imageUrl: /images/laptop.jpg; description: Thin and light powerful laptop for professionals.; storeId: tech-gadgets">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="/images/laptop.jpg" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Laptop Ultra" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 1,299" align="center" position="0 -0.62 0.055" width="3.8" color="#38bdf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#0284c7">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 5: ANC Headphones (X = -12.0) -->
+      <a-entity position="-12.0 1.9 -21.75" rotation="0 0 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695443; name: ANC Headphones; price: 149; category: electronics; imageUrl: https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80; description: Premium wireless over-ear noise-cancelling headphones.; storeId: tech-gadgets">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="ANC Headphones" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 149" align="center" position="0 -0.62 0.055" width="3.8" color="#38bdf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#0284c7">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 6: 4K Display 27 (X = -9.0) -->
+      <a-entity position="-9.0 1.9 -21.75" rotation="0 0 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695444; name: 4K Display 27; price: 399; category: electronics; imageUrl: https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500&q=80; description: 27-inch 4K IPS display with 144Hz refresh rate.; storeId: tech-gadgets">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="4K Display 27" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 399" align="center" position="0 -0.62 0.055" width="3.8" color="#38bdf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#0284c7">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- SOUTH WALL (Z = -8.25, facing North / rotation 0 180 0) -->
+      <!-- Product 7: Bass Speaker (X = -12.0) -->
+      <a-entity position="-12.0 1.9 -8.25" rotation="0 180 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695445; name: Bass Speaker; price: 89; category: electronics; imageUrl: https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80; description: Waterproof portable bluetooth speaker with 24h battery.; storeId: tech-gadgets">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Bass Speaker" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 89" align="center" position="0 -0.62 0.055" width="3.8" color="#38bdf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#0284c7">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- ============================================================== -->
+    <!-- SHOP 2: FASHION HUB (APPAREL)                                  -->
+    <!-- Position: X: -6 to -18 (W 12m), Z: -43 to -57 (D 14m), H: 5m   -->
+    <!-- Center: (-12, 0, -50) | Entrance: X = -6 (Z: -48.5 to -51.5)   -->
+    <!-- ============================================================== -->
+    <a-entity id="shop2-container">
+      <a-entity id="shop2-center" position="-12 0 -50"></a-entity>
+
+      <!-- Floor & Ceiling -->
+      <a-plane position="-12 0.02 -50" rotation="-90 0 0" width="12" height="14" color="#f8fafc" material="roughness: 0.25; metalness: 0.1"></a-plane>
+      <a-plane position="-12 5.0 -50" rotation="90 0 0" width="12" height="14" color="#334155" material="roughness: 0.8"></a-plane>
+
+      <!-- Perimeter Walls -->
+      <a-box position="-12 2.5 -57" width="12" height="5" depth="0.4" color="#475569"></a-box>
+      <a-box position="-18 2.5 -50" width="0.4" height="5" depth="14" color="#475569"></a-box>
+      <a-box position="-12 2.5 -43" width="12" height="5" depth="0.4" color="#475569"></a-box>
+
+      <!-- Entrance Facade on Concourse side (X = -6) -->
+      <a-box position="-6 2.5 -54.25" width="0.4" height="5" depth="5.5" color="#1e293b"></a-box>
+      <a-box position="-6 2.5 -45.75" width="0.4" height="5" depth="5.5" color="#1e293b"></a-box>
+      <a-box position="-6 4.3 -50" width="0.5" height="1.4" depth="3.0" color="#1e293b"></a-box>
+
+      <!-- Store Entrance Signboard -->
+      <a-entity position="-5.7 4.3 -50" rotation="0 90 0">
+        <a-box width="2.8" height="0.9" depth="0.15" color="#be185d" material="emissive: #e11d48; emissiveIntensity: 0.35"></a-box>
+        <a-text value="FASHION HUB" align="center" position="0 0.12 0.1" width="4.8" color="#ffffff" font="roboto"></a-text>
+        <a-text value="PREMIUM APPAREL" align="center" position="0 -0.2 0.1" width="3.2" color="#fce7f3" font="roboto"></a-text>
+      </a-entity>
+
+      <!-- Interior Round Decor Pedestal -->
+      <a-cylinder position="-12 0.25 -50" radius="1.4" height="0.5" color="#f43f5e"></a-cylinder>
+
+      <!-- WALL MOUNTED PRODUCT PLAQUES (SHOP 2) -->
+      <!-- WEST WALL (X = -17.75, rotation 0 90 0) -->
+      <!-- Product 8: Summer T-Shirt (Z = -53.0) -->
+      <a-entity position="-17.75 1.9 -53.0" rotation="0 90 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695424; name: Summer T-Shirt; price: 29; category: fashion; imageUrl: /images/tshirt.jpg; description: Comfortable cotton t-shirt for everyday wear.; storeId: fashion-hub">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#1e293b"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#334155"></a-plane>
+        <a-image class="clickable" src="/images/tshirt.jpg" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Summer T-Shirt" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 29" align="center" position="0 -0.62 0.055" width="3.8" color="#f43f5e" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#be185d">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 9: Denim Jacket (Z = -50.0) -->
+      <a-entity position="-17.75 1.9 -50.0" rotation="0 90 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695446; name: Denim Jacket; price: 89; category: fashion; imageUrl: https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=500&q=80; description: Classic rugged denim trucker jacket with custom metal buttons.; storeId: fashion-hub">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#1e293b"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#334155"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Denim Jacket" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 89" align="center" position="0 -0.62 0.055" width="3.8" color="#f43f5e" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#be185d">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 10: Knit Hoodie (Z = -47.0) -->
+      <a-entity position="-17.75 1.9 -47.0" rotation="0 90 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695447; name: Knit Hoodie; price: 59; category: fashion; imageUrl: https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=500&q=80; description: Ultra-soft fleece hoodie designed for comfort and everyday wear.; storeId: fashion-hub">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#1e293b"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#334155"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Knit Hoodie" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 59" align="center" position="0 -0.62 0.055" width="3.8" color="#f43f5e" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#be185d">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- NORTH WALL (Z = -56.75, rotation 0 0 0) -->
+      <!-- Product 11: Designer Jeans (X = -15.0) -->
+      <a-entity position="-15.0 1.9 -56.75" rotation="0 0 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695429; name: Designer Jeans; price: 79; category: fashion; imageUrl: /images/jeans.jpg; description: Premium denim jeans with a perfect fit.; storeId: fashion-hub">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#1e293b"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#334155"></a-plane>
+        <a-image class="clickable" src="/images/jeans.jpg" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Designer Jeans" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 79" align="center" position="0 -0.62 0.055" width="3.8" color="#f43f5e" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#be185d">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 12: Formal Blazer (X = -12.0) -->
+      <a-entity position="-12.0 1.9 -56.75" rotation="0 0 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695448; name: Formal Blazer; price: 149; category: fashion; imageUrl: https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=500&q=80; description: Tailored Italian wool blend formal blazer for elegant occasions.; storeId: fashion-hub">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#1e293b"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#334155"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Formal Blazer" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 149" align="center" position="0 -0.62 0.055" width="3.8" color="#f43f5e" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#be185d">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 13: Wool Sweater (X = -9.0) -->
+      <a-entity position="-9.0 1.9 -56.75" rotation="0 0 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695449; name: Wool Sweater; price: 65; category: fashion; imageUrl: https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=500&q=80; description: Warm knitted merino wool crewneck sweater.; storeId: fashion-hub">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#1e293b"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#334155"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Wool Sweater" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 65" align="center" position="0 -0.62 0.055" width="3.8" color="#f43f5e" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#be185d">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- ============================================================== -->
+    <!-- SHOP 3: SNEAKER STREET (FOOTWEAR)                              -->
+    <!-- Position: X: 6 to 18 (W 12m), Z: -8 to -22 (D 14m), H: 5m       -->
+    <!-- Center: (12, 0, -15) | Entrance: X = 6 (Z: -13.5 to -16.5)     -->
+    <!-- ============================================================== -->
+    <a-entity id="shop3-container">
+      <a-entity id="shop3-center" position="12 0 -15"></a-entity>
+
+      <!-- Floor & Ceiling -->
+      <a-plane position="12 0.02 -15" rotation="-90 0 0" width="12" height="14" color="#1e293b" material="roughness: 0.3; metalness: 0.2"></a-plane>
+      <a-plane position="12 5.0 -15" rotation="90 0 0" width="12" height="14" color="#0f172a" material="roughness: 0.8"></a-plane>
+
+      <!-- Perimeter Walls -->
+      <a-box position="12 2.5 -22" width="12" height="5" depth="0.4" color="#334155"></a-box>
+      <a-box position="18 2.5 -15" width="0.4" height="5" depth="14" color="#334155"></a-box>
+      <a-box position="12 2.5 -8" width="12" height="5" depth="0.4" color="#334155"></a-box>
+
+      <!-- Entrance Facade on Concourse side (X = 6) -->
+      <a-box position="6 2.5 -19.25" width="0.4" height="5" depth="5.5" color="#0f172a"></a-box>
+      <a-box position="6 2.5 -10.75" width="0.4" height="5" depth="5.5" color="#0f172a"></a-box>
+      <a-box position="6 4.3 -15" width="0.5" height="1.4" depth="3.0" color="#0f172a"></a-box>
+
+      <!-- Store Entrance Signboard -->
+      <a-entity position="5.7 4.3 -15" rotation="0 -90 0">
+        <a-box width="2.8" height="0.9" depth="0.15" color="#4338ca" material="emissive: #6366f1; emissiveIntensity: 0.4"></a-box>
+        <a-text value="SNEAKER STREET" align="center" position="0 0.12 0.1" width="4.8" color="#ffffff" font="roboto"></a-text>
+        <a-text value="FOOTWEAR & KICKS" align="center" position="0 -0.2 0.1" width="3.2" color="#c7d2fe" font="roboto"></a-text>
+      </a-entity>
+
+      <!-- Center Display Platform -->
+      <a-box position="12 0.35 -15" width="2.6" height="0.7" depth="1.4" color="#4f46e5">
+        <a-plane position="0 0.36 0" rotation="-90 0 0" width="2.7" height="1.5" color="#818cf8"></a-plane>
+      </a-box>
+
+      <!-- WALL MOUNTED PRODUCT PLAQUES (SHOP 3) -->
+      <!-- EAST WALL (X = 17.75, facing West / rotation 0 -90 0) -->
+      <!-- Product 14: Classic Sneakers (Z = -18.0) -->
+      <a-entity position="17.75 1.9 -18.0" rotation="0 -90 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d717269542d; name: Classic Sneakers; price: 119; category: fashion; imageUrl: /images/sneakers.jpg; description: Everyday classic sneakers for comfort and style.; storeId: sneaker-store">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="/images/sneakers.jpg" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Classic Sneakers" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 119" align="center" position="0 -0.62 0.055" width="3.8" color="#818cf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#4338ca">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 15: Running Shoes (Z = -15.0) -->
+      <a-entity position="17.75 1.9 -15.0" rotation="0 -90 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d717269544a; name: Running Shoes; price: 135; category: fashion; imageUrl: https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&q=80; description: Responsive air-cushioned marathon running shoes.; storeId: sneaker-store">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Running Shoes" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 135" align="center" position="0 -0.62 0.055" width="3.8" color="#818cf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#4338ca">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 16: High-Top Kicks (Z = -12.0) -->
+      <a-entity position="17.75 1.9 -12.0" rotation="0 -90 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d717269544b; name: High-Top Kicks; price: 159; category: fashion; imageUrl: https://images.unsplash.com/photo-1552346154-21d32810aba3?w=500&q=80; description: Premium leather high-top basketball streetwear sneakers.; storeId: sneaker-store">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1552346154-21d32810aba3?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="High-Top Kicks" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 159" align="center" position="0 -0.62 0.055" width="3.8" color="#818cf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#4338ca">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- NORTH WALL (Z = -21.75, rotation 0 0 0) -->
+      <!-- Product 17: Retro Trainers (X = 15.0) -->
+      <a-entity position="15.0 1.9 -21.75" rotation="0 0 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d717269544c; name: Retro Trainers; price: 110; category: fashion; imageUrl: https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=500&q=80; description: Vintage 90s inspired suede running trainers with foam midsole.; storeId: sneaker-store">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Retro Trainers" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 110" align="center" position="0 -0.62 0.055" width="3.8" color="#818cf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#4338ca">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 18: Slip-On Loafers (X = 12.0) -->
+      <a-entity position="12.0 1.9 -21.75" rotation="0 0 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d717269544d; name: Slip-On Loafers; price: 95; category: fashion; imageUrl: https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=500&q=80; description: Handcrafted leather slip-on penny loafers for smart casual wear.; storeId: sneaker-store">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Slip-On Loafers" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 95" align="center" position="0 -0.62 0.055" width="3.8" color="#818cf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#4338ca">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 19: Canvas Lows (X = 9.0) -->
+      <a-entity position="9.0 1.9 -21.75" rotation="0 0 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d717269544e; name: Canvas Lows; price: 75; category: fashion; imageUrl: https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=500&q=80; description: Timeless vulcanized low-cut canvas daily sneakers.; storeId: sneaker-store">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#0f172a"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#1e293b"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Canvas Lows" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 75" align="center" position="0 -0.62 0.055" width="3.8" color="#818cf8" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#4338ca">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- ============================================================== -->
+    <!-- SHOP 4: ACCESSORIES & LIVING (HOME DECOR)                      -->
+    <!-- Position: X: 6 to 18 (W 12m), Z: -43 to -57 (D 14m), H: 5m       -->
+    <!-- Center: (12, 0, -50) | Entrance: X = 6 (Z: -48.5 to -51.5)     -->
+    <!-- ============================================================== -->
+    <a-entity id="shop4-container">
+      <a-entity id="shop4-center" position="12 0 -50"></a-entity>
+
+      <!-- Floor & Ceiling -->
+      <a-plane position="12 0.02 -50" rotation="-90 0 0" width="12" height="14" color="#3f3f46" material="roughness: 0.25; metalness: 0.15"></a-plane>
+      <a-plane position="12 5.0 -50" rotation="90 0 0" width="12" height="14" color="#18181b" material="roughness: 0.8"></a-plane>
+
+      <!-- Perimeter Walls -->
+      <a-box position="12 2.5 -57" width="12" height="5" depth="0.4" color="#27272a"></a-box>
+      <a-box position="18 2.5 -50" width="0.4" height="5" depth="14" color="#27272a"></a-box>
+      <a-box position="12 2.5 -43" width="12" height="5" depth="0.4" color="#27272a"></a-box>
+
+      <!-- Entrance Facade on Concourse side (X = 6) -->
+      <a-box position="6 2.5 -54.25" width="0.4" height="5" depth="5.5" color="#18181b"></a-box>
+      <a-box position="6 2.5 -45.75" width="0.4" height="5" depth="5.5" color="#18181b"></a-box>
+      <a-box position="6 4.3 -50" width="0.5" height="1.4" depth="3.0" color="#18181b"></a-box>
+
+      <!-- Store Entrance Signboard -->
+      <a-entity position="5.7 4.3 -50" rotation="0 -90 0">
+        <a-box width="2.8" height="0.9" depth="0.15" color="#b45309" material="emissive: #d97706; emissiveIntensity: 0.4"></a-box>
+        <a-text value="HOME & LIVING" align="center" position="0 0.12 0.1" width="4.8" color="#ffffff" font="roboto"></a-text>
+        <a-text value="DECOR & ACCESSORIES" align="center" position="0 -0.2 0.1" width="3.2" color="#fef3c7" font="roboto"></a-text>
+      </a-entity>
+
+      <!-- Center Decor Stand -->
+      <a-cylinder position="12 0.3 -50" radius="1.4" height="0.6" color="#d97706"></a-cylinder>
+
+      <!-- WALL MOUNTED PRODUCT PLAQUES (SHOP 4) -->
+      <!-- EAST WALL (X = 17.75, rotation 0 -90 0) -->
+      <!-- Product 20: Modern Sofa (Z = -53.0) -->
+      <a-entity position="17.75 1.9 -53.0" rotation="0 -90 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695431; name: Modern Sofa; price: 499; category: furniture; imageUrl: /images/sofa.jpg; description: Comfortable 3-seater sofa perfect for your living room.; storeId: home-decor">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#18181b"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#27272a"></a-plane>
+        <a-image class="clickable" src="/images/sofa.jpg" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Modern Sofa" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 499" align="center" position="0 -0.62 0.055" width="3.8" color="#fbbf24" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#b45309">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 21: Minimalist Lamp (Z = -50.0) -->
+      <a-entity position="17.75 1.9 -50.0" rotation="0 -90 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d717269544f; name: Minimalist Lamp; price: 79; category: furniture; imageUrl: https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=500&q=80; description: Architectural matte black adjustable LED reading desk lamp.; storeId: home-decor">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#18181b"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#27272a"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Minimalist Lamp" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 79" align="center" position="0 -0.62 0.055" width="3.8" color="#fbbf24" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#b45309">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 22: Ceramic Vase (Z = -47.0) -->
+      <a-entity position="17.75 1.9 -47.0" rotation="0 -90 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695450; name: Ceramic Vase; price: 39; category: furniture; imageUrl: https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=500&q=80; description: Hand-glazed minimalist ceramic home decor tabletop vase.; storeId: home-decor">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#18181b"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#27272a"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Ceramic Vase" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 39" align="center" position="0 -0.62 0.055" width="3.8" color="#fbbf24" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#b45309">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- NORTH WALL (Z = -56.75, rotation 0 0 0) -->
+      <!-- Product 23: Bestseller Novel (X = 15.0) -->
+      <a-entity position="15.0 1.9 -56.75" rotation="0 0 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695434; name: Bestseller Novel; price: 19; category: grocery; imageUrl: https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500&q=80; description: Award-winning international bestselling fiction paperback novel.; storeId: bookstore">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#18181b"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#27272a"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Bestseller Novel" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 19" align="center" position="0 -0.62 0.055" width="3.8" color="#fbbf24" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#b45309">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 24: Aviator Sunglasses (X = 12.0) -->
+      <a-entity position="12.0 1.9 -56.75" rotation="0 0 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695451; name: Aviator Sunglasses; price: 85; category: fashion; imageUrl: https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=500&q=80; description: Polarized UV400 classic gold-frame aviator sunglasses.; storeId: bookstore">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#18181b"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#27272a"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Aviator Sunglasses" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 85" align="center" position="0 -0.62 0.055" width="3.8" color="#fbbf24" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#b45309">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 25: Leather Wallet (X = 9.0) -->
+      <a-entity position="9.0 1.9 -56.75" rotation="0 0 0" class="clickable"
+        product-plaque="id: 6accf74b6e9c4d7172695452; name: Leather Wallet; price: 45; category: fashion; imageUrl: https://images.unsplash.com/photo-1627123424574-724758594e93?w=500&q=80; description: Genuine full-grain leather bifold wallet with RFID blocking.; storeId: bookstore">
+        <a-box class="clickable" width="2.0" height="2.2" depth="0.08" color="#18181b"></a-box>
+        <a-plane class="clickable" position="0 0 0.045" width="1.9" height="2.1" color="#27272a"></a-plane>
+        <a-image class="clickable" src="https://images.unsplash.com/photo-1627123424574-724758594e93?w=500&q=80" width="1.6" height="1.15" position="0 0.35 0.055"></a-image>
+        <a-text class="clickable" value="Leather Wallet" align="center" position="0 -0.38 0.055" width="3.2" color="#ffffff" font="roboto"></a-text>
+        <a-text class="clickable" value="Rs. 45" align="center" position="0 -0.62 0.055" width="3.8" color="#fbbf24" font="roboto"></a-text>
+        <a-plane class="clickable" position="0 -0.85 0.055" width="1.2" height="0.22" color="#b45309">
+          <a-text value="CLICK TO VIEW" align="center" position="0 0 0.01" width="2.2" color="#ffffff"></a-text>
+        </a-plane>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- ============================================================== -->
+    <!-- CAMERA RIG WITH FIRST PERSON WASD & MOUSE LOOK CONTROLS         -->
+    <!-- ============================================================== -->
+    <a-entity id="player-rig" position="0 1.6 6" mall-navigation-bounds>
+      <a-camera
+        id="player-camera"
+        wasd-controls="acceleration: 35"
+        look-controls="pointerLockEnabled: false"
+      >
+      </a-camera>
+    </a-entity>
+  </a-scene>
+
+  <!-- HUD OVERLAYS -->
+  <div id="hud-overlay">
+    <!-- Quick Mall Teleport Toolbar -->
+    <div class="quick-nav interactive">
+      <span>Mall Teleport:</span>
+      <button class="nav-btn active" onclick="teleportTo(0, 1.6, 6, 0)">Concourse</button>
+      <button class="nav-btn" onclick="teleportTo(-7.5, 1.6, -15, 90)">Tech Gadgets</button>
+      <button class="nav-btn" onclick="teleportTo(-7.5, 1.6, -50, 90)">Fashion Hub</button>
+      <button class="nav-btn" onclick="teleportTo(7.5, 1.6, -15, -90)">Sneaker Street</button>
+      <button class="nav-btn" onclick="teleportTo(7.5, 1.6, -50, -90)">Accessories & Living</button>
+    </div>
+
+    <!-- Navigation instructions badge -->
+    <div class="controls-info">
+      <div><span class="key-badge">W</span> <span class="key-badge">A</span> <span class="key-badge">S</span> <span class="key-badge">D</span> Walk</div>
+      <div><span class="key-badge">Mouse</span> Drag / Look</div>
+      <div><span class="key-badge">Click</span> Select Wall Product</div>
+    </div>
+
+    <!-- Standalone Product Details Modal (Fallback) -->
+    <div id="standalone-modal" class="interactive">
+      <div id="modal-image-container">
+        <img id="modal-image" src="" alt="Product" onerror="this.src='/images/smartphone.jpg'">
+        <button id="modal-close-btn" onclick="closeStandaloneModal()">&times;</button>
+      </div>
+      <div id="modal-body">
+        <div id="modal-category">CATEGORY</div>
+        <div id="modal-title">Product Title</div>
+        <div id="modal-desc">Product description goes here.</div>
+        <div id="modal-price-row">
+          <div id="modal-price">Rs. 0</div>
+          <button id="modal-action-btn" onclick="onModalActionClick()">Add to Cart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var currentSelectedProduct = null;
+
+    // Teleportation function placing the player right at doorway looking inside
+    function teleportTo(x, y, z, yawDeg) {
+      var rig = document.getElementById('player-rig');
+      var cam = document.getElementById('player-camera');
+      if (rig) {
+        if (rig.object3D) {
+          rig.object3D.position.set(x, y, z);
+        } else {
+          rig.setAttribute('position', x + ' ' + y + ' ' + z);
+        }
+      }
+      if (cam && cam.components && cam.components['look-controls']) {
+        var yawRad = (yawDeg * Math.PI) / 180;
+        cam.components['look-controls'].yawObject.rotation.y = yawRad;
+        cam.components['look-controls'].pitchObject.rotation.x = 0;
+      }
+      var buttons = document.querySelectorAll('.nav-btn');
+      buttons.forEach(function (btn) { btn.classList.remove('active'); });
+      if (window.event && window.event.target && window.event.target.classList) {
+        window.event.target.classList.add('active');
+      }
+    }
+
+    // Product Selection handler
+    window.handleProductSelection = function (product) {
+      currentSelectedProduct = product;
+      console.log('[A-Frame Window] Selected 3D product:', product.name, product.id);
+
+      // 1. Send postMessage to Parent React Application
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'SELECT_PRODUCT',
+          product: product
+        }, '*');
+      }
+
+      // 2. Also open standalone in-iframe modal if React panel is not overriding
+      showStandaloneModal(product);
+    };
+
+    function showStandaloneModal(product) {
+      var modal = document.getElementById('standalone-modal');
+      var img = document.getElementById('modal-image');
+      var title = document.getElementById('modal-title');
+      var cat = document.getElementById('modal-category');
+      var desc = document.getElementById('modal-desc');
+      var price = document.getElementById('modal-price');
+
+      if (!modal) return;
+
+      img.src = product.imageUrl || '/images/smartphone.jpg';
+      title.innerText = product.name;
+      cat.innerText = (product.category || 'General').toUpperCase();
+      desc.innerText = product.description || 'Quality item available in our 3D shopping store.';
+      price.innerText = 'Rs. ' + Number(product.price).toLocaleString('en-IN');
+
+      modal.style.display = 'block';
+    }
+
+    function closeStandaloneModal() {
+      var modal = document.getElementById('standalone-modal');
+      if (modal) modal.style.display = 'none';
+      currentSelectedProduct = null;
+    }
+
+    function onModalActionClick() {
+      if (!currentSelectedProduct) return;
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'ADD_TO_CART',
+          product: currentSelectedProduct
+        }, '*');
+      } else {
+        alert(currentSelectedProduct.name + ' added to cart! Please log in to your account at /login to finalize checkout.');
+      }
+      closeStandaloneModal();
+    }
+
+    window.addEventListener('message', function (event) {
+      if (!event.data) return;
+      if (event.data.type === 'CLOSE_STANDALONE_MODAL') {
+        closeStandaloneModal();
+      }
+    });
+
+    window.addEventListener('load', function () {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'AFRAME_SCENE_READY' }, '*');
+      }
+    });
+  </script>
+</body>
+</html>

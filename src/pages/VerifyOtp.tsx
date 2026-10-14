@@ -12,6 +12,7 @@ interface VerifyState {
   value?: string;
   isNewUser?: boolean;
   name?: string;
+  debugOtp?: string;
 }
 
 export const VerifyOtp = () => {
@@ -32,6 +33,12 @@ export const VerifyOtp = () => {
   const [cooldown, setCooldown] = useState(30);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    if (state?.debugOtp && typeof state.debugOtp === 'string' && state.debugOtp.length === 6) {
+      setOtp(state.debugOtp.split(''));
+    }
+  }, [state?.debugOtp]);
 
   useEffect(() => {
     if (cooldown <= 0) return;

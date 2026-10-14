@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import type { ProductConfig } from '../../types';
+import type { ProductConfig } from '../../../types';
 import { Text, Image } from '@react-three/drei';
 
 interface ProductDisplayProps {

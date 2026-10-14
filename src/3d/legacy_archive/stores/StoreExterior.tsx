@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text } from '@react-three/drei';
-import type { StoreConfig } from '../../types';
+import type { StoreConfig } from '../../../types';
 
 interface StoreExteriorProps {
   store: StoreConfig;

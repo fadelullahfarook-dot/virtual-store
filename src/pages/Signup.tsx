@@ -77,7 +77,7 @@ export const Signup = () => {
     },
 
     onError: () => {
-      setError('Google Sign-Up was cancelled or failed.');
+      setError('Google Sign-Up blocked (origin_mismatch): Please add http://localhost:5174 to Authorized JavaScript Origins in Google Cloud Console, or sign up with Email OTP.');
     },
   });
 

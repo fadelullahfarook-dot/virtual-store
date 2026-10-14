@@ -2,8 +2,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PointerLockControls } from '@react-three/drei';
 import { Vector3, Euler } from 'three';
-import { useKeyboard } from '../../hooks/useKeyboard';
-import { useStore } from '../../store/useStore';
+import { useKeyboard } from '../../../hooks/useKeyboard';
+import { useStore } from '../../../store/useStore';
 
 const WALK_SPEED = 5;
 

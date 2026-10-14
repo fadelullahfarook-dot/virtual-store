@@ -1,5 +1,5 @@
 import React from 'react';
-import type { StoreConfig } from '../../types';
+import type { StoreConfig } from '../../../types';
 import { StoreExterior } from './StoreExterior';
 import { StoreInterior } from './StoreInterior';
 

@@ -4,7 +4,7 @@ import { Player } from '../components/Player';
 import { Road } from './Road';
 import { Store } from '../stores/Store';
 import { Tree } from './Tree';
-import { useStore } from '../../store/useStore';
+import { useStore } from '../../../store/useStore';
 
 export const StreetEnvironment: React.FC = () => {
   const stores = useStore(state => state.stores);

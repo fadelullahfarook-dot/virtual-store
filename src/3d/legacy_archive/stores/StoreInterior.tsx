@@ -1,5 +1,5 @@
 import React from 'react';
-import type { StoreConfig } from '../../types';
+import type { StoreConfig } from '../../../types';
 import { ProductDisplay } from './ProductDisplay';
 import { Shelf } from './Shelf';
 import { Counter } from './Counter';
